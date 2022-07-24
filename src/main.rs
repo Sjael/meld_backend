@@ -17,11 +17,11 @@ pub type Db = Pool<Postgres>;
 
 const PG_HOST: &str = "localhost";
 const PG_ROOT_DB: &str = "postgres";
-const PG_ROOT_USER: &str = "jake";
-const PG_ROOT_PWD: &str = "soccer4444";
+const PG_ROOT_USER: &str = "postgres";
+const PG_ROOT_PWD: &str = "soccer44";
 
 
-#[derive(Debug, FromRow, Serialize)]
+#[derive(Debug, FromRow, Serialize, Default)]
 struct Item {
 	id: i32,
 	name: String,
@@ -46,6 +46,7 @@ async fn main()  {
     let app = Router::new()
         .route("/", get(get_items))
 		.route("/get_item", get(get_item))
+		.route("/add_items", get(add_items))
         .layer(Extension(pool));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
@@ -73,10 +74,9 @@ where
     }
 }
 
-#[derive(Debug, Deserialize,Serialize)]
+#[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct Params {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
     foo: Option<i32>,
     bar: Option<String>,
 }
@@ -89,7 +89,7 @@ struct Rewrap{
 async fn get_item(Extension(pool): Extension<PgPool>, Query(params): Query<Params>) -> Json<Value>{
 	
 	let mut response = Rewrap{
-		response: "".to_string()
+		response: Item::default()
 	};
 	if let Some(item) = params.foo{
 		let select_query = 
@@ -105,10 +105,35 @@ async fn get_item(Extension(pool): Extension<PgPool>, Query(params): Query<Param
 			.expect("no result");
 		println!("\n=== select tickets with query.map...:\n{:?}", tickets);
 		let subres = json!(tickets);
-		response.response.push(tickets);
+		response.response = tickets;
 	}
 	
 	Json(json!(response))
+}
+
+async fn add_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
+	println!("nah");
+	// 2) Create table if not exist yet
+	sqlx::query(
+		r#"
+        CREATE TABLE IF NOT EXISTS item_table (
+        id INT,
+        key SERIAL PRIMARY KEY,
+        name TEXT,
+        info JSONB
+        );"#,
+	)
+	.execute(&pool)
+	.await;
+
+	// 3) Insert a new ticket
+	let row: (i32,) = sqlx::query_as("insert into item_table (id, name) values ($1, $2) returning id")
+		.bind(3201)
+        .bind("Sabi's Revenge")
+		.fetch_one(&pool)
+		.await
+		.expect("no result");
+    Json(json!(""))
 }
 
 async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
