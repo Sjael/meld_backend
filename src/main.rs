@@ -8,6 +8,7 @@ use axum::{
     Router,
     Json
 };
+use tower_http::cors::{Any, CorsLayer};
 use std::{fmt, str::FromStr};
 use std::net::SocketAddr;   
 use serde_json::{Value, json};
@@ -15,10 +16,10 @@ use serde::{de, Serialize, Deserialize, Deserializer};
 
 pub type Db = Pool<Postgres>;
 
-const PG_HOST: &str = "localhost";
+const PG_HOST: &str = "34.69.247.169";
 const PG_ROOT_DB: &str = "postgres";
-const PG_ROOT_USER: &str = "postgres";
-const PG_ROOT_PWD: &str = "soccer44";
+const PG_ROOT_USER: &str = "jake";
+const PG_ROOT_PWD: &str = "chipotleismybae";
 
 
 #[derive(Debug, FromRow, Serialize, Default)]
@@ -47,7 +48,8 @@ async fn main()  {
         .route("/", get(get_items))
 		.route("/get_item", get(get_item))
 		.route("/add_items", get(add_items))
-        .layer(Extension(pool));
+        .layer(Extension(pool))
+		.layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
     println!("listening on {}", addr);
@@ -188,3 +190,5 @@ async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
     */
     Json(json!(tickets))
 }
+
+
