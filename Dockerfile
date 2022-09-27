@@ -3,5 +3,5 @@ COPY . .
 RUN cargo build --release
 
 FROM debian:buster-slim
-COPY --from=builder ./target/release/docker ./target/release/docker
-CMD ["/target/release/docker"]
+COPY --from=builder ./target/release/db-test ./target/release/db-test
+CMD ["/target/release/db-test"]
