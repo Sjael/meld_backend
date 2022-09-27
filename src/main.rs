@@ -51,7 +51,7 @@ async fn main()  {
         .layer(Extension(pool))
 		.layer(CorsLayer::permissive());
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 4000));
     println!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
