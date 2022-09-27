@@ -16,10 +16,10 @@ use serde::{de, Serialize, Deserialize, Deserializer};
 
 pub type Db = Pool<Postgres>;
 
-const PG_HOST: &str = "34.69.247.169";
-const PG_ROOT_DB: &str = "postgres";
-const PG_ROOT_USER: &str = "jake";
-const PG_ROOT_PWD: &str = "chipotleismybae";
+const PG_HOST: &str = "containers-us-west-67.railway.app:7616";
+const PG_ROOT_DB: &str = "railway";
+const PG_ROOT_USER: &str = "postgres";
+const PG_ROOT_PWD: &str = "hsyKFBEu7UDcuISu7XHo";
 
 
 #[derive(Debug, FromRow, Serialize, Default)]
