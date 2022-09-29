@@ -1,4 +1,4 @@
-FROM rust:lastest AS builder
+FROM rust:latest AS builder
 COPY . .
 RUN cargo build --release
 
