@@ -26,6 +26,7 @@ const PG_ROOT_PWD: &str = "sWetkbxfLgS7Sw0fnogs";
 struct Item {
 	id: i32,
 	name: String,
+	image: String,
 }
 
 async fn new_db_pool(host: &str, db: &str, user: &str, pwd: &str, max_con: u32) -> Result<Db, sqlx::Error> {
@@ -95,12 +96,13 @@ async fn get_item(Extension(pool): Extension<PgPool>, Query(params): Query<Param
 	};
 	if let Some(item) = params.foo{
 		let select_query = 
-			sqlx::query("SELECT id, name FROM item_table WHERE id = $1")
+			sqlx::query("SELECT id, name, image_path FROM item_table WHERE id = $1")
 			.bind(item);
 		let tickets: Item = select_query
 			.map(|row: PgRow| Item {
 				id: row.get("id"),
 				name: row.get("name"),
+				image: row.get("image_path")
 			})
 			.fetch_one(&pool)
 			.await
@@ -172,11 +174,12 @@ async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
 	println!("\n== select tickets with PgRows:\n{}", str_result);
     */
 	// 5) Select query with map() (build the Ticket manually)
-	let select_query = sqlx::query("SELECT id, name FROM item_table");
+	let select_query = sqlx::query("SELECT id, name, image_path FROM item_table");
 	let tickets: Vec<Item> = select_query
 		.map(|row: PgRow| Item {
 			id: row.get("id"),
 			name: row.get("name"),
+			image: row.get("image_path")
 		})
 		.fetch_all(&pool)
 		.await
