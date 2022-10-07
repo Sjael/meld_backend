@@ -29,6 +29,12 @@ struct Item {
 	image: String,
 }
 
+#[derive(Debug, FromRow, Serialize, Default)]
+struct Patch {
+	version: String,
+	name: String,
+}
+
 async fn new_db_pool(host: &str, db: &str, user: &str, pwd: &str, max_con: u32) -> Result<Db, sqlx::Error> {
     
     let con_string = format!("postgres://{}:{}@{}/{}", user, pwd, host, db);
@@ -49,6 +55,8 @@ async fn main()  {
         .route("/", get(get_items))
 		.route("/get_item", get(get_item))
 		.route("/add_items", get(add_items))
+		.route("/get_patches", get(get_patches))
+		.route("/get_patch", get(get_patch))
         .layer(Extension(pool))
 		.layer(CorsLayer::permissive());
 
@@ -115,23 +123,25 @@ async fn get_item(Extension(pool): Extension<PgPool>, Query(params): Query<Param
 	Json(json!(response))
 }
 
-async fn add_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
-	println!("nah");
+async fn add_items(Extension(pool): Extension<PgPool>, Query(params): Query<Params>) -> Json<Value> {
 	// 2) Create table if not exist yet
 	sqlx::query(
 		r#"
-        CREATE TABLE IF NOT EXISTS item_table (
-        id INT,
+        CREATE TABLE IF NOT EXISTS patch_notes_class (
         key SERIAL PRIMARY KEY,
-        name TEXT,
-        info JSONB
+		version TEXT,
+        class TEXT,
+		old TEXT,
+        new TEXT,
+		attr TEXT,
+		quote TEXT
         );"#,
 	)
 	.execute(&pool)
 	.await;
 
 	// 3) Insert a new ticket
-	let row: (i32,) = sqlx::query_as("insert into item_table (id, name) values ($1, $2) returning id")
+	let row: (i32,) = sqlx::query_as("insert into game_versions (id, name) values ($1, $2) returning id")
 		.bind(3201)
         .bind("Sabi's Revenge")
 		.fetch_one(&pool)
@@ -174,7 +184,7 @@ async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
 	println!("\n== select tickets with PgRows:\n{}", str_result);
     */
 	// 5) Select query with map() (build the Ticket manually)
-	let select_query = sqlx::query("SELECT id, name, image_path FROM item_table");
+	let select_query = sqlx::query("SELECT id, name, image_path FROM item_table ORDER BY id DESC");
 	let tickets: Vec<Item> = select_query
 		.map(|row: PgRow| Item {
 			id: row.get("id"),
@@ -195,3 +205,37 @@ async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
 }
 
 
+async fn get_patches(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
+	let select_query = sqlx::query("SELECT version, name FROM game_versions ORDER BY key DESC");
+	let tickets: Vec<Patch> = select_query
+		.map(|row: PgRow| Patch {
+			version: row.get("version"),
+			name: row.get("name"),
+		})
+		.fetch_all(&pool)
+		.await
+        .expect("no result");
+	println!("\n=== select tickets with query.map...:\n{:?}", tickets);
+    Json(json!(tickets))
+}
+
+
+async fn get_patch(Extension(pool): Extension<PgPool>, Query(params): Query<Params>) -> Json<Value> {
+	
+	if let Some(version) = params.bar{
+		let select_query = sqlx::query("SELECT version, name FROM game_versions WHERE version=$1")
+		.bind(version);
+		let tickets: Vec<Patch> = select_query
+			.map(|row: PgRow| Patch {
+				version: row.get("version"),
+				name: row.get("name"),
+			})
+			.fetch_all(&pool)
+			.await
+			.expect("no result");
+		println!("\n=== select tickets with query.map...:\n{:?}", tickets);
+		Json(json!(tickets))
+	} else{
+		Json(json!(""))
+	}
+}
