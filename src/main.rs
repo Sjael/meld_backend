@@ -1,7 +1,7 @@
 #![allow(unused)] // silence unused warnings while exploring (to comment out)
 
 use sqlx::postgres::{PgPoolOptions, PgRow};
-use sqlx::{FromRow, Row, Pool, Postgres, PgPool};
+use sqlx::{FromRow, Row, Pool, Postgres, PgPool, Type, types::Json as sqlxJson};
 use axum::{
     extract::{Extension, Query, FromRequest, RequestParts},
     routing::get,
@@ -27,6 +27,14 @@ struct Item {
 	id: i32,
 	name: String,
 	image: String,
+	info: sqlxJson<ItemInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+struct ItemInfo{
+	cost: i32,
+	phys_pen: i32,
+	phys_power: i32,
 }
 
 #[derive(Debug, FromRow, Serialize, Default)]
@@ -104,13 +112,14 @@ async fn get_item(Extension(pool): Extension<PgPool>, Query(params): Query<Param
 	};
 	if let Some(item) = params.foo{
 		let select_query = 
-			sqlx::query("SELECT id, name, image_path FROM item_table WHERE id = $1")
+			sqlx::query("SELECT id, name, image_path, info FROM item_table WHERE id = $1")
 			.bind(item);
 		let tickets: Item = select_query
 			.map(|row: PgRow| Item {
 				id: row.get("id"),
 				name: row.get("name"),
-				image: row.get("image_path")
+				image: row.get("image_path"), 
+				info: row.get("info")
 			})
 			.fetch_one(&pool)
 			.await
@@ -125,7 +134,26 @@ async fn get_item(Extension(pool): Extension<PgPool>, Query(params): Query<Param
 
 async fn add_items(Extension(pool): Extension<PgPool>, Query(params): Query<Params>) -> Json<Value> {
 	// 2) Create table if not exist yet
-	sqlx::query(
+	let test_jsonb = r#"{
+        "phys_power" : 70,
+        "cost" : 2800,
+        "phys_pen" : 10
+    }"#;
+	let v: Value = serde_json::from_str::<Value>(test_jsonb).unwrap();
+
+	// 3) Insert a new ticket
+	sqlx::query("update item_table set info = $1 where id='3101'")
+		.bind(v)
+		.execute(&pool)
+		.await;
+    Json(json!(""))
+}
+
+async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
+    
+    /* 
+
+		sqlx::query(
 		r#"
         CREATE TABLE IF NOT EXISTS patch_notes_class (
         key SERIAL PRIMARY KEY,
@@ -148,11 +176,7 @@ async fn add_items(Extension(pool): Extension<PgPool>, Query(params): Query<Para
 		.await
 		.expect("no result");
     Json(json!(""))
-}
 
-async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
-    
-    /* 
     println!("nah");
 	// 2) Create table if not exist yet
 	sqlx::query(
@@ -184,12 +208,13 @@ async fn get_items(Extension(pool): Extension<PgPool>, ) -> Json<Value> {
 	println!("\n== select tickets with PgRows:\n{}", str_result);
     */
 	// 5) Select query with map() (build the Ticket manually)
-	let select_query = sqlx::query("SELECT id, name, image_path FROM item_table ORDER BY id DESC");
+	let select_query = sqlx::query("SELECT id, name, image_path, info FROM item_table ORDER BY id DESC");
 	let tickets: Vec<Item> = select_query
 		.map(|row: PgRow| Item {
 			id: row.get("id"),
 			name: row.get("name"),
-			image: row.get("image_path")
+			image: row.get("image_path"),
+			info: row.get("info")
 		})
 		.fetch_all(&pool)
 		.await
