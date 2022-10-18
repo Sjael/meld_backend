@@ -21,6 +21,15 @@ const PG_ROOT_DB: &str = "railway";
 const PG_ROOT_USER: &str = "postgres";
 const PG_ROOT_PWD: &str = "sWetkbxfLgS7Sw0fnogs";
 
+async fn new_db_pool(host: &str, db: &str, user: &str, pwd: &str, max_con: u32) -> Result<Db, sqlx::Error> {
+    
+    let con_string = format!("postgresql://{}:{}@{}/{}", user, pwd, host, db);
+	PgPoolOptions::new()
+        .max_connections(max_con)
+        .connect(&con_string)
+        .await
+}
+
 
 pub mod get_item;
 pub mod get_items;
@@ -69,16 +78,6 @@ pub struct ItemInfo{
 
 
 
-
-
-async fn new_db_pool(host: &str, db: &str, user: &str, pwd: &str, max_con: u32) -> Result<Db, sqlx::Error> {
-    
-    let con_string = format!("postgres://{}:{}@{}/{}", user, pwd, host, db);
-	PgPoolOptions::new()
-        .max_connections(max_con)
-        .connect(&con_string)
-        .await
-}
 
 #[tokio::main]
 async fn main()  {
